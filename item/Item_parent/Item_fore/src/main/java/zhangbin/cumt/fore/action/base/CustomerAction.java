@@ -1,0 +1,236 @@
+package zhangbin.cumt.fore.action.base;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+
+import javax.jms.JMSException;
+import javax.jms.MapMessage;
+import javax.jms.Message;
+import javax.jms.Session;
+import javax.servlet.http.HttpSession;
+
+import org.apache.commons.lang3.RandomStringUtils;
+import org.apache.struts2.ServletActionContext;
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Namespace;
+import org.apache.struts2.convention.annotation.ParentPackage;
+import org.apache.struts2.convention.annotation.Result;
+import org.apache.struts2.convention.annotation.Results;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Scope;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.core.MessageCreator;
+import org.springframework.stereotype.Controller;
+
+import zhangbin.cumt.fore.action.parent.BaseAction;
+import zhangbin.cumt.item_crm.service.Customer;
+import zhangbin.cumt.item_crm.service.CustomerService;
+import zhangbin.cumt.utils.MailUtil2;
+@Controller
+@Namespace("/")
+@ParentPackage("json-default")
+@Scope("prototype")
+@Results(value = { 
+		@Result(name="flagResult",params= {"root","flag"},type="json"),
+		@Result(name="acquireLoginState",params= {"root","map"},type="json"),
+		@Result(name="error",location="/error.html"),
+		@Result(name="signUp",location="/signup-success.html"),
+		@Result(name="success",location="/index.html"),
+		@Result(name="loginFail",location="/login.html"),
+		@Result(name="loginOut",params= {"root","flag"},type="json")
+		
+})
+public class CustomerAction extends BaseAction<Customer> {
+	
+	@Autowired
+	private CustomerService customerService;
+	@Autowired
+	private RedisTemplate<String,Object> redisTemplate;
+	@Autowired
+	private JmsTemplate jmsTemplate;
+	/**
+	 * @Description: 验证手机号码是否被占用
+	 */
+	@Action("customerAction_validateTel")
+	public String validateTel() throws Exception {
+		list = customerService.findByTelephone(model.getTelephone());
+		if(list != null && list.size() > 0) {
+			flag = false;
+		}else {
+			flag = true;
+		}
+		return "flagResult";
+	}
+	
+	/**
+	 * 
+	 * @Description: 验证邮箱是否被占用
+	 */
+	@Action("customerAction_validateEmail")
+	public String validateEmail() throws Exception {
+		
+		list = customerService.findByEmail(model.getEmail());
+		if(list != null && list.size() > 0) {
+			flag = false;
+		}else {
+			flag = true;
+		}
+		return "flagResult";
+	}
+	
+	/**
+	 * 
+	 * @Description: 发送手机验证码，并记录入redis中
+	 */
+	@Action("customerAction_sendCheckcode")
+	public String sendCheckcode() throws Exception {
+		String random = RandomStringUtils.randomNumeric(6);
+		
+		jmsTemplate.send("sms_msg", new MessageCreator() {
+						
+			@Override
+			public Message createMessage(Session session) throws JMSException {
+				MapMessage mapMessage = session.createMapMessage();
+				String signName = "腰缠万贯下扬州";
+				String templateCode = "SMS_132975070";
+				Map<String, Object> templateParam = new HashMap<String, Object>();
+				templateParam.put("code", random);
+				mapMessage.setString("telephone",model.getTelephone());
+				mapMessage.setString("signName", signName);
+				mapMessage.setString("templateCode", templateCode);
+				mapMessage.setObject("templateParam", templateParam);
+				return mapMessage;
+			}
+		});
+		
+		//同时把这个值放入redis中缓存,以进行校验
+		redisTemplate.opsForValue().set(model.getTelephone(), random);
+		System.out.println(random);
+		flag = true;
+		//发送短信的代码(这儿已经由activeMQ代替，已经不需要了，保留代码)
+		//flag = AliSMSUtil.sendMessge(model.getTelephone(), signName, templateCode, templateParam);
+		return "flagResult";
+	}
+	
+	
+	@Value("${item.url}")
+	private String itemUrl;
+	//手机验证码
+	private String checkcode;
+	public void setCheckcode(String checkcode) {
+		this.checkcode = checkcode;
+	}
+	//邮箱激活码(其实可以和手机验证码合在一起)
+	private String activeCode;
+	public void setActiveCode(String activeCode) {
+		this.activeCode = activeCode;
+	}
+
+	/**
+	 * 
+	 * @Description: 提交数据，把数据存储在Customer数据表中，同时提醒客户进行邮箱激活
+	 */
+	@Action("customerAction_signUp")
+	public String signUp() throws Exception {
+		String realCheckcode = (String) redisTemplate.opsForValue().get(model.getTelephone());
+		
+		//如果验证通过，把封装好的数据存入数据库
+		if(realCheckcode.equals(checkcode)) {
+			customerService.save(model);
+		}else {
+			//在这儿进行手机验证码的 核实，如果不一致，重新返回注册页面
+			//TODO补充返回页面的视图界面
+		}
+		//生成随机序列，存入redis中，同时为客户发送邮件，让其进行激活
+		activeCode = UUID.randomUUID().toString();
+		//同时把这个值放入redis中缓存,以进行校验
+		redisTemplate.opsForValue().set(model.getTelephone(), activeCode);
+		//调用邮箱工具类，给其发送激活邮件
+		
+		//这儿调整为通过activeMQ发送消息
+		
+		jmsTemplate.send("mail_msg", new MessageCreator() {
+			
+			@Override
+			public Message createMessage(Session session) throws JMSException {
+				String activeUrl = itemUrl+"customerAction_activeMail.action";
+				String emailMsg = "欢迎您注册速运快递，为了提供更好的服务，请您在24小时内激活账户!!</br>"
+						+ "<a href='"+activeUrl+"?telephone="+model.getTelephone()+"&activeCode="+activeCode  +"'>点击激活账户</a>";
+				
+				MapMessage mapMessage = session.createMapMessage();
+				mapMessage.setString("email", model.getEmail());
+				mapMessage.setString("emailMsg", emailMsg);
+				return mapMessage;
+			}
+		});
+				
+		return "signUp";
+	}
+	
+	
+	
+	@Action("customerAction_activeMail")
+	public String activeMail() throws Exception {
+		//根据接收到的手机号码去数据库查询，如果有结果，说明用户合法，否则提示用户非法，跳转到错误页面
+		List<Customer> customerList = customerService.findByTelephone(model.getTelephone());
+		if(customerList == null || customerList.size() == 0) {
+			result = "-1";    //"非法用户，请先去注册";
+			return ERROR;
+		}
+		//判断查询出来的用户的type的值，如果为null，进行激活，否则提示已经激活，跳转到首页
+		if(customerList != null && customerList.size() > 0) {
+			if(customerList.get(0).getType() != null) {
+				result = "0"; //"用户已经激活,可以直接登录";
+				return SUCCESS;
+			}
+		}
+		//根据邮箱验证码 和 redis中缓存的数据对比，如果相等，激活成功，否则提示验证码错误，激活失败
+		if(!redisTemplate.opsForValue().get(model.getTelephone()).equals(activeCode)) {
+			result = "1";//"激活码不正确，激活失败";
+			return ERROR;
+		}
+		//激活成功，跳转到首页
+		customerService.activeCustomer(model.getTelephone());
+		return SUCCESS;
+	}
+	
+	@Action("customerAction_login")
+	public String login() throws Exception {
+		HttpSession session = ServletActionContext.getRequest().getSession();
+		String realCheckcode = (String) session.getAttribute("validateCode");
+		if(realCheckcode.equals(checkcode)) {
+			Customer customer = customerService.findByTelephoneAndPassword(model.getTelephone(),model.getPassword());
+			if(customer != null) {
+				session.setAttribute("customer", customer);
+				return SUCCESS;
+			}
+		}
+		return "loginFail";
+	}
+	@Action("customerAction_acquireLoginState")
+	public String acquireLoginState() throws Exception {
+		HttpSession session = ServletActionContext.getRequest().getSession();
+		Customer customer = (Customer) session.getAttribute("customer");
+		if(customer != null) {
+			flag = true;
+		}else {
+			flag = false;
+		}
+		map.put("flag", flag);
+		map.put("customer", customer);
+		return "acquireLoginState";
+	}
+
+	@Action("customerAction_loginOut")
+	public String loginOut() throws Exception {
+		HttpSession session = ServletActionContext.getRequest().getSession();
+		session.removeAttribute("customer");
+		flag = false;
+		return "loginOut";
+	}
+	
+}

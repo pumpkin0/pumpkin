@@ -1,0 +1,63 @@
+package zhangbin.cumt.action.base;
+
+
+
+import java.io.File;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Namespace;
+import org.apache.struts2.convention.annotation.ParentPackage;
+import org.apache.struts2.convention.annotation.Result;
+import org.apache.struts2.convention.annotation.Results;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Controller;
+
+import com.opensymphony.xwork2.ActionSupport;
+import com.opensymphony.xwork2.ModelDriven;
+
+import zhangbin.cumt.domain.base.Area;
+@Controller
+@Namespace("/")
+@ParentPackage("json-default")
+@Scope("prototype")
+@Results(value = { 
+		@Result(name="findAll",params= {"root","courList"},type="json"),
+		@Result(name="pageQuery",params= {"root","map"},type="json"),
+		@Result(name="save",location="/pages/base/courier.jsp"),
+		@Result(name="delete",location="/pages/base/courier.jsp")
+		
+})
+public class AreaAction extends ActionSupport implements ModelDriven<Area> {
+	private File upload;
+	private String uploadFileName;
+	private String uploadContentType;
+	
+	public void setUpload(File upload) {
+		this.upload = upload;
+	}
+	public void setUploadFileName(String uploadFileName) {
+		this.uploadFileName = uploadFileName;
+	}
+	public void setUploadContentType(String uploadContentType) {
+		this.uploadContentType = uploadContentType;
+	}
+	@Action("area_importXls")
+	public String importXls() throws Exception {
+		
+		
+		
+		
+		System.out.println("ceshi ");
+		return super.execute();
+	}
+	
+	
+	
+	
+	private Area area = new Area();
+	@Override
+	public Area getModel() {
+		return area;
+	}
+
+}

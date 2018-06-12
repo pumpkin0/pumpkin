@@ -1,0 +1,99 @@
+package zhangbin.cumt.action.base;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Namespace;
+import org.apache.struts2.convention.annotation.ParentPackage;
+import org.apache.struts2.convention.annotation.Result;
+import org.apache.struts2.convention.annotation.Results;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Controller;
+
+import com.google.gson.Gson;
+import com.opensymphony.xwork2.ActionSupport;
+import com.opensymphony.xwork2.ModelDriven;
+
+import zhangbin.cumt.domain.base.Courier;
+import zhangbin.cumt.service.base.CourierService;
+@Controller
+@Namespace("/")
+@ParentPackage("json-default")
+@Scope("prototype")
+@Results(value = { 
+		@Result(name="findAll",params= {"root","courList"},type="json"),
+		@Result(name="pageQuery",params= {"root","map"},type="json"),
+		@Result(name="save",location="/pages/base/courier.jsp"),
+		@Result(name="delete",location="/pages/base/courier.jsp")
+		
+})
+public class CourierAction extends ActionSupport implements ModelDriven<Courier> {
+	@Autowired
+	private CourierService courierService;
+	private List<Courier> courList;
+	
+	private int page;
+	private int rows;
+	private String ids;
+	public void setIds(String ids) {
+		this.ids = ids;
+	}
+	private HashMap<String,Object> map;
+	public HashMap<String, Object> getMap() {
+		return map;
+	}
+	public int getPage() {
+		return page;
+	}
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public int getRows() {
+		return rows;
+	}
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+	public List<Courier> getCourList() {
+		return courList;
+	}
+	@Action("courier_save")
+	public String save() {
+		courierService.save(courier);
+		return "save";
+	}
+	@Action("courier_findAll")
+	public String findAll() {
+		courList = courierService.findAll();
+		return "findAll";
+	}
+	@Action("courier_pageQuery")
+	public String pageQuery() throws Exception {
+		PageRequest pageRequest = new PageRequest(page-1, rows);
+		Page<Courier> pageResult = courierService.pageQuery(courier,pageRequest);
+		
+		//下面这行代码是直接进行分页查询，没有条件筛选
+		//Page pageResult = courierService.pageQuery(new PageRequest(page-1, rows));
+		map = new HashMap<>();
+		map.put("total", pageResult.getNumber());
+		map.put("rows", pageResult.getContent());
+		return "pageQuery";
+	}
+	
+	@Action("courier_delete")
+	public String delete() throws Exception {
+		courierService.delete(ids);
+		return "delete";
+	}
+	
+	private Courier courier = new Courier();
+	@Override
+	public Courier getModel() {
+		return courier;
+	}
+
+}

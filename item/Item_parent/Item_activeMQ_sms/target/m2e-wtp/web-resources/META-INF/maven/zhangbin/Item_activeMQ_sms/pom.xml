@@ -1,0 +1,19 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>zhangbin</groupId>
+    <artifactId>Item_parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <artifactId>Item_activeMQ_sms</artifactId>
+  <packaging>war</packaging>
+  <name>activeMQ_sms</name>
+  <description>通过消息队列进行短信的发送</description>
+  <dependencies>
+  	<dependency>
+  		<groupId>zhangbin</groupId>
+  		<artifactId>Item_Management_util</artifactId>
+  		<version>0.0.1-SNAPSHOT</version>
+  	</dependency>
+  </dependencies>
+</project>

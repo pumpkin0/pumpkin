@@ -1,0 +1,10 @@
+package zhangbin.cumt.dao;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
+
+import zhangbin.cumt.domain.base.Courier;
+
+public interface CourierDao extends JpaRepository<Courier, Integer> ,JpaSpecificationExecutor<Courier>{
+
+}

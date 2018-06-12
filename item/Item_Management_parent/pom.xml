@@ -1,0 +1,19 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>zhangbin</groupId>
+    <artifactId>Item_parent</artifactId>
+    <version>0.0.1-SNAPSHOT</version>
+  </parent>
+  <groupId>zhangbin</groupId>
+  <artifactId>Item_Management_parent</artifactId>
+  <version>0.0.1-SNAPSHOT</version>
+  <packaging>pom</packaging>
+  <modules>
+  	<module>Item_Management_domain</module>
+  	<module>Item_Management_util</module>
+  	<module>Item_Management_service</module>
+  	<module>Item_Management_web</module>
+  	<module>Item_Management_dao</module>
+  </modules>
+</project>

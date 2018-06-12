@@ -1,0 +1,80 @@
+package zhangbin.cumt.action.base;
+
+import java.util.HashMap;
+import java.util.List;
+
+import org.apache.struts2.convention.annotation.Action;
+import org.apache.struts2.convention.annotation.Namespace;
+import org.apache.struts2.convention.annotation.ParentPackage;
+import org.apache.struts2.convention.annotation.Result;
+import org.apache.struts2.convention.annotation.Results;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Scope;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.stereotype.Controller;
+
+import com.opensymphony.xwork2.ActionSupport;
+import com.opensymphony.xwork2.ModelDriven;
+
+import zhangbin.cumt.domain.base.Standard;
+import zhangbin.cumt.service.base.StandardService;
+@Controller
+@Namespace("/")
+@ParentPackage("json-default")
+@Results(value = { 
+		@Result(name="findAll",params= {"root","standList"},type="json"),
+		@Result(name="pageQuery",params= {"root","map"},type="json"),
+		@Result(name="save", location="/pages/base/standard.jsp")
+		
+})
+@Scope("prototype")
+public class StandardAction extends ActionSupport implements ModelDriven<Standard> {
+	@Autowired
+	private StandardService standardService ;
+	private List<Standard> standList;
+	private HashMap<String,Object> map;
+	
+
+	private int page;
+	private int rows;
+	public void setPage(int page) {
+		this.page = page;
+	}
+	public void setRows(int rows) {
+		this.rows = rows;
+	}
+	public HashMap<String, Object> getMap() {
+		return map;
+	}
+	public List<Standard> getStandList() {
+		return standList;
+	}
+	
+	@Action("standard_findAll")
+	public String findAll() {
+		standList = standardService.findAll();
+		return "findAll";
+	}
+	
+	@Action("standard_save")
+	public String save() {
+		standardService.save(standard);
+		return "save";
+	}
+	@Action("standard_pageQuery")
+	public String pageQuery() {
+		Page pageResult = standardService.pageQuery(new PageRequest(page-1, rows));
+		map = new HashMap<>();
+		map.put("total", pageResult.getNumber());
+		map.put("rows", pageResult.getContent());
+		return "pageQuery";
+	}
+		
+	private Standard standard = new Standard();
+	@Override
+	public Standard getModel() {
+		return standard;
+	}
+
+}

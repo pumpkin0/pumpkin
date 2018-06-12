@@ -1,0 +1,24 @@
+package zhangbin.cumt.service.base;
+
+import java.util.List;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+
+import zhangbin.cumt.domain.base.Courier;
+
+public interface CourierService {
+
+	void save(Courier courier);
+
+	List<Courier> findAll();
+
+	Page pageQuery(PageRequest pageRequest);
+	
+	Page pageQuery(Courier courier, PageRequest pageRequest);
+
+	void delete(String ids);
+
+	List<?> findByFixedAreaId(String id);
+
+}
